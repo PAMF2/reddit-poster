@@ -155,8 +155,10 @@ def gaussian_type(page, selector: str, text: str, timeout: int = 10000) -> None:
 
     ~3 % of alphabetic characters trigger an adjacent-key typo followed by
     a Backspace correction, mimicking how a real human hand slips.
+    sigma=15 keeps click positions well off-center (human-like) vs sigma=3
+    which is detectable as too precise.
     """
-    gaussian_click(page, selector, timeout=timeout)
+    gaussian_click(page, selector, sigma=15.0, timeout=timeout)
     time.sleep(g(0.35, 0.12, lo=0.15))
     for char in text:
         # Typo: press an adjacent key, pause, backspace, then type the right char
@@ -306,6 +308,38 @@ POST_BANK: dict[str, list[tuple[str, str]]] = {
          "Feels like they don't actually watch the fights anymore. Some of these cards are embarrassing."),
         ("McGregor vs Chandler — who lands first?",
          "Chandler's timing is elite. If Conor isn't sharp in round 1 this gets ugly fast."),
+    ],
+    "gaming": [
+        ("Anyone else completely lost track of time in Elden Ring?",
+         "Just crossed 200 hours and still haven't touched all the DLC. The open world loop is genuinely addictive."),
+        ("What game surprised you the most in 2024?",
+         "Balatro for me. Did not expect a card roguelite to consume two weeks of my life."),
+        ("The writing in Disco Elysium is on another level",
+         "Replaying it for the third time and I'm still catching new dialogue options. Nothing else comes close."),
+        ("Best 'one more turn' games?",
+         "Currently alternating between Civ 6 and Hades. Send help."),
+        ("FromSoftware difficulty — gatekeeping or design philosophy?",
+         "The beauty is that every death teaches you something. It's the best feedback loop in gaming."),
+    ],
+    "learnprogramming": [
+        ("Finally understood recursion after months of struggling",
+         "Drawing the call stack by hand was the breakthrough. If you're stuck, try that before anything else."),
+        ("Is Python still the best first language in 2024?",
+         "I'd argue yes — the feedback loop is so fast you can stay focused on concepts rather than syntax."),
+        ("How long did it take you to feel confident reading other people's code?",
+         "Just hit 18 months of learning and I can finally jump into a repo without freezing up."),
+        ("The moment everything clicked for me was understanding pointers",
+         "Once you see that a variable is just a name for a memory address, so many other concepts open up."),
+    ],
+    "science": [
+        ("New study on sleep deprivation and decision-making — actually frightening",
+         "Even 6h/night for a week produces cognitive deficits equivalent to 24h total sleep deprivation. Most people can't self-assess the deficit either."),
+        ("The scale of the observable universe is genuinely hard to process",
+         "93 billion light-years across. Every galaxy like a grain of sand on every beach on Earth. It breaks my brain every time."),
+        ("Are we actually close to a malaria vaccine?",
+         "R21 trials are showing ~75% efficacy. If it holds up in broader rollout this could be one of the biggest public health wins in a generation."),
+        ("Why do placebos work even when patients know they're placebos?",
+         "Open-label placebo studies are fascinating. The ritual of treatment itself seems to trigger measurable physiological responses."),
     ],
 }
 

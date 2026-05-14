@@ -33,6 +33,7 @@
     <!-- hidden telemetry fields -->
     <input type="hidden" name="_t"  id="_t"  value="0">
     <input type="hidden" name="_kt" id="_kt" value="">
+    <input type="hidden" name="_cp" id="_cp" value="">
 
     <button type="submit">Post</button>
   </form>
@@ -43,6 +44,7 @@
   const start = Date.now();
   const keyIntervals = [];
   let lastKey = null;
+  const clickPositions = [];
 
   function trackKeys(el) {
     el.addEventListener('keydown', () => {
@@ -52,13 +54,29 @@
     });
   }
 
+  function trackClicks(el) {
+    el.addEventListener('mousedown', e => {
+      const r = el.getBoundingClientRect();
+      clickPositions.push([
+        el.name,
+        Math.round(e.clientX - r.left),
+        Math.round(e.clientY - r.top),
+        Math.round(r.width),
+        Math.round(r.height),
+      ].join(':'));
+    });
+  }
+
   trackKeys(document.getElementById('title'));
   trackKeys(document.getElementById('body'));
+  trackClicks(document.getElementById('title'));
+  trackClicks(document.getElementById('body'));
 
   document.getElementById('f').addEventListener('submit', function(e) {
     e.preventDefault();
     document.getElementById('_t').value  = ((Date.now() - start) / 1000).toFixed(2);
     document.getElementById('_kt').value = keyIntervals.join('|');
+    document.getElementById('_cp').value = clickPositions.join('|');
 
     fetch('/submit', { method: 'POST', body: new FormData(this) })
       .then(r => r.json().then(d => ({ ok: r.ok, data: d })))

@@ -1,5 +1,5 @@
 """
-Tests for the simulation components.
+Tests for the simulation components (53 total: 52 unit + 1 integration).
 
 Run:
   python -m pytest tests/ -v
@@ -293,6 +293,32 @@ class TestServerDetection:
     def test_keystroke_cov_empty(self):
         from server.app import _keystroke_cov
         assert _keystroke_cov("") is None
+
+
+# ── Click deviation (signal 10) ───────────────────────────────────────────────
+
+class TestClickDeviation:
+    def test_perfect_center_is_low(self):
+        from server.app import _click_deviation
+        # Clicks exactly at center of 500×40 and 500×120 elements
+        cp = "title:250:20:500:40|body:250:60:500:120"
+        dev = _click_deviation(cp)
+        assert dev is not None and dev < 0.04
+
+    def test_human_like_is_high(self):
+        from server.app import _click_deviation
+        # Clicks well off-center
+        cp = "title:180:8:500:40|body:330:85:500:120"
+        dev = _click_deviation(cp)
+        assert dev is not None and dev > 0.1
+
+    def test_single_sample_returns_none(self):
+        from server.app import _click_deviation
+        assert _click_deviation("title:250:20:500:40") is None
+
+    def test_empty_returns_none(self):
+        from server.app import _click_deviation
+        assert _click_deviation("") is None
 
 
 # ── Rate-limit detection ──────────────────────────────────────────────────────

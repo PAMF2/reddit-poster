@@ -2,15 +2,16 @@
 Simulated Reddit server with multi-signal bot detection.
 
 Detection signals:
-  1. Request rate          — > 10 req/min per IP
-  2. Timing regularity     — inter-request interval variance too low
-  3. Bot user-agent        — python-requests, curl, etc.
-  4. Missing browser headers — Accept-Language, Accept
-  5. Fast form fill        — < 1.5 s
-  6. Honeypot filled       — hidden _email field
-  7. Keystroke regularity  — CoV of _kt timing array < 0.15
-  8. Headless browser tells — missing Sec-Fetch-* / Sec-CH-UA with Chrome UA
-  9. Low title entropy     — Shannon entropy < 2.2 bits/char (repetitive text)
+  1.  Request rate          — > 10 req/min per IP
+  2.  Timing regularity     — inter-request interval variance too low
+  3.  Bot user-agent        — python-requests, curl, etc.
+  4.  Missing browser headers — Accept-Language, Accept
+  5.  Fast form fill        — < 1.5 s
+  6.  Honeypot filled       — hidden _email field
+  7.  Keystroke regularity  — CoV of _kt timing array < 0.15
+  8.  Headless browser tells — missing Sec-Fetch-* / Sec-CH-UA with Chrome UA
+  9.  Low title entropy     — Shannon entropy < 2.2 bits/char (repetitive text)
+  10. Click position        — mean deviation from element center < 0.04 (too precise)
 
 Run:  python server/app.py
 Admin dashboard: http://localhost:5000/admin
@@ -75,7 +76,36 @@ def _keystroke_cov(kt_field: str) -> float | None:
         return None
 
 
-def _detect(ip: str, ua: str, form_time: float, honeypot: str, kt: str, title: str) -> list[str]:
+def _click_deviation(cp_field: str) -> float | None:
+    """
+    Mean normalized distance of each click from its element's center.
+    Returns None if fewer than 2 click samples.
+    Real humans click off-center; naive bots click exactly at center (deviation=0).
+    Format: 'field:x:y:width:height|...'
+    """
+    try:
+        entries = [e for e in cp_field.split("|") if e.strip()]
+        if len(entries) < 2:
+            return None
+        deviations = []
+        for entry in entries:
+            parts = entry.split(":")
+            if len(parts) != 5:
+                continue
+            _, x, y, w, h = parts
+            x, y, w, h = int(x), int(y), int(w), int(h)
+            if w <= 0 or h <= 0:
+                continue
+            dx = (x - w / 2) / w
+            dy = (y - h / 2) / h
+            deviations.append(math.hypot(dx, dy))
+        return statistics.mean(deviations) if len(deviations) >= 2 else None
+    except Exception:
+        return None
+
+
+def _detect(ip: str, ua: str, form_time: float, honeypot: str, kt: str, title: str,
+            cp: str = "") -> list[str]:
     reasons: list[str] = []
     now = time.time()
 
@@ -137,6 +167,11 @@ def _detect(ip: str, ua: str, form_time: float, honeypot: str, kt: str, title: s
         if entropy < 2.2:
             reasons.append(f"low_entropy:{entropy:.2f}")
 
+    # 10. Click position too centered — naive bots click exactly at element center
+    dev = _click_deviation(cp)
+    if dev is not None and dev < 0.04:
+        reasons.append(f"centered_clicks:dev={dev:.3f}")
+
     return reasons
 
 
@@ -157,9 +192,10 @@ def submit():
         form_time = float(request.form.get("_t", 0) or 0)
         honeypot  = request.form.get("_email", "")
         kt        = request.form.get("_kt", "")
+        cp        = request.form.get("_cp", "")
         title     = request.form.get("title", "")[:200]
 
-        reasons = _detect(ip, ua, form_time, honeypot, kt, title)
+        reasons = _detect(ip, ua, form_time, honeypot, kt, title, cp)
         flagged = bool(reasons)
 
         entry = {
