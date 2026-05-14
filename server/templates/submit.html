@@ -19,10 +19,10 @@
   <h2>Create Post</h2>
   <form id="f" method="POST">
     <label>Title</label>
-    <input name="title" placeholder="Post title..." required maxlength="200">
+    <input name="title" id="title" placeholder="Post title..." required maxlength="200">
 
     <label>Body (optional)</label>
-    <textarea name="body" placeholder="Text..."></textarea>
+    <textarea name="body" id="body" placeholder="Text..."></textarea>
 
     <!-- honeypot: bots fill this, humans don't see it -->
     <div class="hp">
@@ -30,8 +30,9 @@
       <input name="_email" tabindex="-1" autocomplete="off">
     </div>
 
-    <!-- hidden: form fill time -->
-    <input type="hidden" name="_t" id="_t" value="0">
+    <!-- hidden telemetry fields -->
+    <input type="hidden" name="_t"  id="_t"  value="0">
+    <input type="hidden" name="_kt" id="_kt" value="">
 
     <button type="submit">Post</button>
   </form>
@@ -40,9 +41,24 @@
 
 <script>
   const start = Date.now();
+  const keyIntervals = [];
+  let lastKey = null;
+
+  function trackKeys(el) {
+    el.addEventListener('keydown', () => {
+      const now = Date.now();
+      if (lastKey !== null) keyIntervals.push(now - lastKey);
+      lastKey = now;
+    });
+  }
+
+  trackKeys(document.getElementById('title'));
+  trackKeys(document.getElementById('body'));
+
   document.getElementById('f').addEventListener('submit', function(e) {
     e.preventDefault();
-    document.getElementById('_t').value = ((Date.now() - start) / 1000).toFixed(2);
+    document.getElementById('_t').value  = ((Date.now() - start) / 1000).toFixed(2);
+    document.getElementById('_kt').value = keyIntervals.join('|');
 
     fetch('/submit', { method: 'POST', body: new FormData(this) })
       .then(r => r.json().then(d => ({ ok: r.ok, data: d })))

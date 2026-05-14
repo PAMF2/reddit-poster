@@ -222,6 +222,102 @@ class TestRetry:
             wrong()
 
 
+# ── Typo simulation ───────────────────────────────────────────────────────────
+
+class TestTypoSimulation:
+    def test_adjacent_keys_map_complete(self):
+        from bot.common import _ADJACENT
+        # Every lowercase letter should have adjacents defined
+        for ch in 'abcdefghijklmnopqrstuvwxyz':
+            assert ch in _ADJACENT, f"'{ch}' missing from _ADJACENT"
+            assert len(_ADJACENT[ch]) >= 1
+
+    def test_adjacent_keys_are_lowercase(self):
+        from bot.common import _ADJACENT
+        for ch, neighbours in _ADJACENT.items():
+            assert neighbours == neighbours.lower(), f"Neighbours for '{ch}' not lowercase"
+
+    def test_gaussian_type_calls_backspace_on_typo(self):
+        from unittest.mock import MagicMock, call, patch
+        from bot.common import gaussian_type
+
+        page = MagicMock()
+        page.locator.return_value.first.bounding_box.return_value = {
+            "x": 100, "y": 100, "width": 200, "height": 30
+        }
+        # Force every character to trigger a typo
+        with patch('bot.common.random.random', return_value=0.0):  # 0.0 < 0.03 always
+            with patch('bot.common.time.sleep'):
+                gaussian_type(page, "input", "abc")
+
+        typed  = [c.args[0] for c in page.keyboard.type.call_args_list]
+        pressed = [c.args[0] for c in page.keyboard.press.call_args_list]
+        # Should see Backspace presses (one per letter since all trigger typo)
+        assert "Backspace" in pressed
+        # Correct chars should still be typed (a, b, c appear somewhere)
+        assert set(typed) >= {'a', 'b', 'c'}
+
+
+# ── Server detection signal tests ─────────────────────────────────────────────
+
+class TestServerDetection:
+    def test_shannon_entropy_high_for_normal_text(self):
+        from server.app import _shannon_entropy
+        e = _shannon_entropy("Jon Jones vs Stipe — who wins the rematch?")
+        assert e > 3.0
+
+    def test_shannon_entropy_low_for_repetitive(self):
+        from server.app import _shannon_entropy
+        e = _shannon_entropy("aaaaaaaaaaaaaaaaaaaaaa")
+        assert e < 1.0
+
+    def test_keystroke_cov_regular(self):
+        from server.app import _keystroke_cov
+        # Perfectly regular 100ms intervals → CoV ≈ 0
+        kt = "|".join(["100"] * 20)
+        cov = _keystroke_cov(kt)
+        assert cov is not None and cov < 0.05
+
+    def test_keystroke_cov_human(self):
+        from server.app import _keystroke_cov
+        # Human-like variance: mix of fast and slow
+        import random as rnd; rnd.seed(42)
+        intervals = [str(int(rnd.gauss(120, 50))) for _ in range(25)]
+        cov = _keystroke_cov("|".join(intervals))
+        assert cov is not None and cov > 0.15
+
+    def test_keystroke_cov_too_few_samples(self):
+        from server.app import _keystroke_cov
+        assert _keystroke_cov("100|110|105") is None  # < 8 samples
+
+    def test_keystroke_cov_empty(self):
+        from server.app import _keystroke_cov
+        assert _keystroke_cov("") is None
+
+
+# ── Rate-limit detection ──────────────────────────────────────────────────────
+
+class TestRateLimitDetection:
+    def test_known_phrases_detected(self):
+        from bot.reddit_browser_agent import _check_rate_limited
+        page = MagicMock()
+        page.locator.return_value.inner_text.return_value = \
+            "Whoa, slow down. You are doing that too much."
+        assert _check_rate_limited(page) is True
+
+    def test_clean_page_not_rate_limited(self):
+        from bot.reddit_browser_agent import _check_rate_limited
+        page = MagicMock()
+        page.locator.return_value.inner_text.return_value = "Welcome to Reddit"
+        assert _check_rate_limited(page) is False
+
+    def test_exception_returns_false(self):
+        from bot.reddit_browser_agent import _check_rate_limited
+        page = MagicMock()
+        page.locator.return_value.inner_text.side_effect = Exception("timeout")
+        assert _check_rate_limited(page) is False
+
+
 # ── HTTP bot vs local sim server ──────────────────────────────────────────────
 
 from bot.agent import BotAgent

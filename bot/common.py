@@ -137,10 +137,36 @@ def gaussian_click(page, selector: str, sigma: float = 3.0, timeout: int = 10000
     page.mouse.up()
 
 
+# Adjacent keyboard keys for realistic typo simulation
+_ADJACENT: dict[str, str] = {
+    'a': 'sqwz',  'b': 'vghn',  'c': 'xdfv',  'd': 'serfcx',
+    'e': 'wsdr',  'f': 'drtgvc','g': 'ftyhbv', 'h': 'gyujnb',
+    'i': 'ujko',  'j': 'huikmn','k': 'jiolm',  'l': 'kop',
+    'm': 'njk',   'n': 'bhjm',  'o': 'iklp',   'p': 'ol',
+    'q': 'wa',    'r': 'edft',  's': 'awedxz', 't': 'rfgy',
+    'u': 'yhji',  'v': 'cfgb',  'w': 'qase',   'x': 'zsdc',
+    'y': 'tghu',  'z': 'asx',
+}
+
+
 def gaussian_type(page, selector: str, text: str, timeout: int = 10000) -> None:
+    """
+    Type text with Gaussian inter-keystroke delays and occasional typos.
+
+    ~3 % of alphabetic characters trigger an adjacent-key typo followed by
+    a Backspace correction, mimicking how a real human hand slips.
+    """
     gaussian_click(page, selector, timeout=timeout)
     time.sleep(g(0.35, 0.12, lo=0.15))
     for char in text:
+        # Typo: press an adjacent key, pause, backspace, then type the right char
+        if char.isalpha() and random.random() < 0.03:
+            neighbours = _ADJACENT.get(char.lower(), 'x')
+            page.keyboard.type(random.choice(neighbours))
+            time.sleep(g(0.17, 0.06, lo=0.08))
+            page.keyboard.press('Backspace')
+            time.sleep(g(0.13, 0.05, lo=0.06))
+
         page.keyboard.type(char)
         delay = g(0.09, 0.04, lo=0.03, hi=0.45)
         if random.random() < 0.08:

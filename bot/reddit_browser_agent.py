@@ -347,6 +347,12 @@ def run(
 
             except Exception as exc:
                 log.error("Post %d/%d failed: %s", i + 1, n, exc)
+                try:
+                    path = f"debug_{int(time.time())}.png"
+                    page.screenshot(path=path)
+                    log.info("Screenshot saved: %s", path)
+                except Exception:
+                    pass
                 stats.sent += 1; stats.failed += 1
             finally:
                 ctx.close()
