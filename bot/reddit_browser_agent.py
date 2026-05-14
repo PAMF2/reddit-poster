@@ -168,6 +168,72 @@ def login(page, username: str, password: str) -> bool:
     return False
 
 
+# ── Organic pre-post browsing ─────────────────────────────────────────────────
+
+def browse_feed(page, sub: str, duration: float | None = None) -> None:
+    """
+    Simulate organic browsing on r/sub before posting.
+    Scrolls the feed, optionally opens a post, reads it, then returns.
+    This establishes realistic cookie/session history before any submission.
+    """
+    if duration is None:
+        duration = g(35.0, 12.0, lo=18.0)
+
+    log.info("Browsing r/%s for %.0fs before posting", sub, duration)
+    page.goto(f"{BASE}/r/{sub}/", wait_until="domcontentloaded", timeout=20000)
+    time.sleep(g(2.0, 0.6, lo=1.2))
+
+    deadline = time.monotonic() + duration
+
+    while time.monotonic() < deadline:
+        # Scroll down the feed in chunks
+        pixels = int(g(280, 100, lo=80))
+        page.mouse.wheel(0, pixels)
+        time.sleep(g(1.8, 0.7, lo=0.8))
+
+        # Occasionally open a post and read it
+        if random.random() < 0.35 and time.monotonic() < deadline - 12:
+            try:
+                links = page.locator("a.title").all()
+                if links:
+                    link = random.choice(links[:6])
+                    link.click()
+                    time.sleep(g(2.5, 0.8, lo=1.5))
+                    # Scroll through the post
+                    for _ in range(random.randint(2, 4)):
+                        page.mouse.wheel(0, int(g(250, 100, lo=80)))
+                        time.sleep(g(1.5, 0.6, lo=0.7))
+                    page.go_back(wait_until="domcontentloaded", timeout=10000)
+                    time.sleep(g(1.5, 0.5, lo=0.8))
+            except Exception:
+                pass  # post link may have been stale — just continue scrolling
+
+        # Occasional long pause (user distracted)
+        if random.random() < 0.12:
+            pause = g(6.0, 2.0, lo=3.0)
+            log.info("Organic pause %.1fs", pause)
+            time.sleep(pause)
+
+
+# ── Rate-limit detection ──────────────────────────────────────────────────────
+
+_RATE_LIMIT_PHRASES = [
+    "you are doing that too much",
+    "try again in",
+    "you're doing that too much",
+    "whoa, slow down",
+    "something went wrong",
+]
+
+
+def _check_rate_limited(page) -> bool:
+    try:
+        body = page.locator("body").inner_text(timeout=2000).lower()
+        return any(phrase in body for phrase in _RATE_LIMIT_PHRASES)
+    except Exception:
+        return False
+
+
 # ── Post submission ───────────────────────────────────────────────────────────
 
 @retry(attempts=3, base_delay=2.0)
@@ -256,10 +322,20 @@ def run(
                     if reuse_session:
                         save_session(ctx)
 
+                # Organic browsing before first post in each context
+                if i == 0 or random.random() < 0.25:
+                    browse_feed(page, sub)
+
                 title, body = pick_post(sub)
                 log.info("Post: %s", title[:60])
 
                 url = submit_post(page, sub, title, body, dry_run=dry_run)
+
+                # Detect Reddit rate-limiting after submit
+                if url and _check_rate_limited(page):
+                    backoff = g(70.0, 20.0, lo=45.0)
+                    log.warning("Rate-limited — backing off %.0fs", backoff)
+                    time.sleep(backoff)
                 stats.sent += 1
                 if dry_run:
                     stats.success += 1
