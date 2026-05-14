@@ -1,0 +1,19 @@
+# Proxy list — one per line, copied to proxies.txt (gitignored)
+# Formats supported:
+#   http://ip:port
+#   http://user:pass@ip:port
+#   socks5://ip:port
+#   socks5://user:pass@ip:port
+#
+# Free proxy sources (unreliable, good for testing):
+#   https://www.proxy-list.download/HTTP
+#   https://spys.one/en/
+#
+# Paid residential proxies (reliable for Reddit):
+#   Webshare  — webshare.io       (~$3/GB)
+#   BrightData — brightdata.com   (most reliable)
+#   Oxylabs   — oxylabs.io
+
+# http://1.2.3.4:8080
+# http://user:pass@5.6.7.8:3128
+# socks5://9.10.11.12:1080

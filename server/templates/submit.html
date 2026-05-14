@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Submit — r/SimReddit</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#dae0e6;margin:0;padding:30px;display:flex;justify-content:center}
+  .card{background:#fff;border-radius:6px;padding:24px;width:560px}
+  h2{margin:0 0 20px;color:#ff4500}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;color:#1c1c1c}
+  input,textarea{width:100%;box-sizing:border-box;border:1px solid #edeff1;border-radius:4px;padding:10px;font-size:14px;margin-bottom:14px}
+  textarea{height:120px;resize:vertical}
+  button{background:#ff4500;color:#fff;border:none;padding:10px 24px;border-radius:4px;font-size:14px;cursor:pointer}
+  .hp{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>Create Post</h2>
+  <form id="f" method="POST">
+    <label>Title</label>
+    <input name="title" placeholder="Post title..." required maxlength="200">
+
+    <label>Body (optional)</label>
+    <textarea name="body" placeholder="Text..."></textarea>
+
+    <!-- honeypot: bots fill this, humans don't see it -->
+    <div class="hp">
+      <label>Email</label>
+      <input name="_email" tabindex="-1" autocomplete="off">
+    </div>
+
+    <!-- hidden: form fill time -->
+    <input type="hidden" name="_t" id="_t" value="0">
+
+    <button type="submit">Post</button>
+  </form>
+  <p id="result" style="margin-top:14px;font-size:13px"></p>
+</div>
+
+<script>
+  const start = Date.now();
+  document.getElementById('f').addEventListener('submit', function(e) {
+    e.preventDefault();
+    document.getElementById('_t').value = ((Date.now() - start) / 1000).toFixed(2);
+
+    fetch('/submit', { method: 'POST', body: new FormData(this) })
+      .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+      .then(({ ok, data }) => {
+        const el = document.getElementById('result');
+        if (ok) {
+          el.style.color = '#1a7f37';
+          el.textContent = 'Posted! ID: ' + data.post_id;
+        } else {
+          el.style.color = '#cc3300';
+          el.textContent = 'FLAGGED: ' + data.reasons.join(', ');
+        }
+      });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+flask
+requests
+playwright
+praw
+# cloakbrowser  # optional stealth Chromium — pip install cloakbrowser && py -m cloakbrowser install

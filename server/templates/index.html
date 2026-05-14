@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>r/SimReddit</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#dae0e6;margin:0;padding:20px}
+  .header{background:#ff4500;color:#fff;padding:12px 20px;border-radius:6px;margin-bottom:16px;display:flex;align-items:center;gap:16px}
+  .header a{color:#fff;text-decoration:none;font-size:14px;padding:6px 14px;background:rgba(255,255,255,.2);border-radius:4px}
+  .post{background:#fff;border-radius:4px;padding:14px 16px;margin-bottom:8px;display:flex;gap:14px;align-items:flex-start}
+  .score{font-weight:700;color:#ff4500;min-width:36px;text-align:center;font-size:13px}
+  .title{font-weight:600;font-size:15px;margin:0 0 4px}
+  .meta{font-size:12px;color:#878a8c}
+  .flagged{border-left:4px solid #ff4500}
+  .badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:700}
+  .badge-flag{background:#ffe0d9;color:#cc3300}
+  .badge-ok{background:#e6f4ea;color:#1a7f37}
+  .empty{text-align:center;color:#878a8c;padding:40px}
+</style>
+</head>
+<body>
+<div class="header">
+  <strong>r/SimReddit</strong>
+  <a href="/submit">+ New Post</a>
+  <a href="/admin">Admin</a>
+</div>
+
+{% if posts %}
+  {% for p in posts %}
+  <div class="post {% if p.flagged %}flagged{% endif %}">
+    <div class="score">{{ p.id }}</div>
+    <div>
+      <div class="title">{{ p.title }}</div>
+      <div class="meta">
+        {{ p.ts }} &nbsp;·&nbsp; {{ p.ip }}
+        &nbsp;·&nbsp;
+        {% if p.flagged %}
+          <span class="badge badge-flag">FLAGGED — {{ p.reasons|join(', ') }}</span>
+        {% else %}
+          <span class="badge badge-ok">PASSED</span>
+        {% endif %}
+        &nbsp;·&nbsp; fill: {{ p.fill_s }}s
+      </div>
+      {% if p.body %}
+      <div style="margin-top:6px;font-size:13px;color:#3c3c3c">{{ p.body }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty">No posts yet. Run the bot!</div>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin — Bot Detection Dashboard</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#0d1117;color:#e6edf3;margin:0;padding:20px}
+  h1{color:#ff4500;margin:0 0 20px}
+  .stats{display:flex;gap:16px;margin-bottom:24px}
+  .stat{background:#161b22;border-radius:8px;padding:16px 24px;flex:1;text-align:center}
+  .stat .n{font-size:32px;font-weight:700}
+  .stat .l{font-size:12px;color:#8b949e;margin-top:4px}
+  .n-flag{color:#ff4500}
+  .n-pass{color:#3fb950}
+  .n-rate{color:#d29922}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:#161b22;padding:10px 12px;text-align:left;color:#8b949e;font-weight:600;position:sticky;top:0}
+  td{padding:9px 12px;border-bottom:1px solid #21262d}
+  tr:hover td{background:#161b22}
+  .badge{display:inline-block;padding:2px 7px;border-radius:12px;font-size:11px;font-weight:700}
+  .f{background:#3d0f00;color:#ff7b72}
+  .p{background:#0d3320;color:#3fb950}
+  .section{background:#161b22;border-radius:8px;padding:16px;margin-bottom:20px}
+  h2{font-size:14px;color:#8b949e;margin:0 0 12px;text-transform:uppercase;letter-spacing:.05em}
+  .reason{background:#21262d;border-radius:4px;padding:2px 7px;font-size:11px;font-family:monospace;margin:2px;display:inline-block}
+  #refresh{position:fixed;bottom:20px;right:20px;background:#ff4500;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:14px}
+</style>
+</head>
+<body>
+<h1>Bot Detection Dashboard</h1>
+
+<div class="stats">
+  <div class="stat">
+    <div class="n">{{ total }}</div>
+    <div class="l">Total posts</div>
+  </div>
+  <div class="stat">
+    <div class="n n-pass">{{ passed }}</div>
+    <div class="l">Passed</div>
+  </div>
+  <div class="stat">
+    <div class="n n-flag">{{ flagged }}</div>
+    <div class="l">Flagged</div>
+  </div>
+  <div class="stat">
+    <div class="n n-rate">{{ rate }}%</div>
+    <div class="l">Detection rate</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Per-IP breakdown</h2>
+  <table>
+    <tr>
+      <th>IP</th><th>Requests/min</th><th>Posts</th><th>Flagged</th><th>Reasons seen</th>
+    </tr>
+    {% for row in per_ip %}
+    <tr>
+      <td style="font-family:monospace">{{ row.ip }}</td>
+      <td>{{ row.reqs }}</td>
+      <td>{{ row.posts }}</td>
+      <td>
+        {% if row.flagged > 0 %}
+          <span class="badge f">{{ row.flagged }}</span>
+        {% else %}
+          <span class="badge p">0</span>
+        {% endif %}
+      </td>
+      <td>
+        {% for r in row.reasons %}
+          <span class="reason">{{ r }}</span>
+        {% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="section">
+  <h2>Recent posts</h2>
+  <table>
+    <tr>
+      <th>Time</th><th>Title</th><th>IP</th><th>Fill</th><th>Status</th><th>Reasons</th>
+    </tr>
+    {% for p in posts %}
+    <tr>
+      <td style="font-family:monospace;color:#8b949e">{{ p.ts }}</td>
+      <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.title }}</td>
+      <td style="font-family:monospace;font-size:11px">{{ p.ip }}</td>
+      <td>{{ p.fill_s }}s</td>
+      <td>
+        {% if p.flagged %}
+          <span class="badge f">FLAGGED</span>
+        {% else %}
+          <span class="badge p">PASSED</span>
+        {% endif %}
+      </td>
+      <td>
+        {% for r in p.reasons %}
+          <span class="reason">{{ r }}</span>
+        {% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<button id="refresh" onclick="location.reload()">Refresh</button>
+
+<script>
+  setTimeout(() => location.reload(), 5000);
+</script>
+</body>
+</html>
